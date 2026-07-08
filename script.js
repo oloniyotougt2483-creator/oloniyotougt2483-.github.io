@@ -12,7 +12,7 @@ async function fetchFlights() {
     statusEl.textContent = "🔄 Fetching live flights...";
 
     try {
-        const url = "https://opensky-network.org/api/states/all?lamin=4.0&lomin=2.5&lamax=14.0&lomax=15.0";
+        const url = "https://opensky-network.org/api/states/all?time=1458564121&icao24=3c6444";
         
         const response = await fetch(url);
         const data = await response.json();
