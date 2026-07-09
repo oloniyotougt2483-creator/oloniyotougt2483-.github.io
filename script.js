@@ -9,11 +9,12 @@ let planeMarkers = {};
 
 async function fetchFlights() {
     const statusEl = document.getElementById('status');
-    statusEl.textContent = "🔄 Fetching live flights...";
+    statusEl.textContent = "⏳ Fetching live flights...";
 
     try {
+        // Bounding box roughly covering Nigeria (lat 4-14N, lon 2.5-15E)
         const url = "https://opensky-network.org/api/states/all?lamin=4&lomin=2.5&lamax=14&lomax=15";
-        
+
         const response = await fetch(url);
         const data = await response.json();
 
@@ -33,10 +34,10 @@ async function fetchFlights() {
 
                 if (lat && lon) {
                     const marker = L.marker([lat, lon], {
-                        icon: L.divIcon({ 
-                            className: 'plane', 
-                            html: '✈️', 
-                            iconSize: [30, 30] 
+                        icon: L.divIcon({
+                            className: 'plane',
+                            html: '✈️',
+                            iconSize: [30, 30]
                         })
                     }).addTo(map);
 
@@ -55,13 +56,12 @@ async function fetchFlights() {
         } else {
             statusEl.textContent = "No flights detected at the moment";
         }
-
     } catch (err) {
         console.error(err);
         statusEl.textContent = "❌ Error loading data";
     }
 }
 
-// Initial fetch + auto refresh
+// Initial fetch + auto refresh (60s to respect OpenSky's anonymous rate limit)
 fetchFlights();
-setInterval(fetchFlights, 12000);
+setInterval(fetchFlights, 60000);
