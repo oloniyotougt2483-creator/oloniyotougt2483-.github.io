@@ -7,17 +7,43 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 let planeMarkers = {};
 
+// OpenSky doesn't send CORS headers for browser requests from github.io,
+// so we route through a public CORS proxy. Two options in case one is down.
+function buildProxiedUrl(targetUrl) {
+    return "https://corsproxy.io/?url=" + encodeURIComponent(targetUrl);
+}
+
+function buildFallbackUrl(targetUrl) {
+    return "https://api.allorigins.win/raw?url=" + encodeURIComponent(targetUrl);
+}
+
 async function fetchFlights() {
     const statusEl = document.getElementById('status');
     statusEl.textContent = "⏳ Fetching live flights...";
 
+    // Bounding box roughly covering Nigeria (lat 4-14N, lon 2.5-15E)
+    const openSkyUrl = "https://opensky-network.org/api/states/all?lamin=4&lomin=2.5&lamax=14&lomax=15";
+
+    let data;
+
     try {
-        // Bounding box roughly covering Nigeria (lat 4-14N, lon 2.5-15E)
-        const url = "https://opensky-network.org/api/states/all?lamin=4&lomin=2.5&lamax=14&lomax=15";
+        const response = await fetch(buildProxiedUrl(openSkyUrl));
+        if (!response.ok) throw new Error("Primary proxy returned " + response.status);
+        data = await response.json();
+    } catch (primaryErr) {
+        console.warn("Primary CORS proxy failed, trying fallback:", primaryErr);
+        try {
+            const response2 = await fetch(buildFallbackUrl(openSkyUrl));
+            if (!response2.ok) throw new Error("Fallback proxy returned " + response2.status);
+            data = await response2.json();
+        } catch (fallbackErr) {
+            console.error("Both proxies failed:", fallbackErr);
+            statusEl.textContent = "❌ Error loading data (proxy unavailable)";
+            return;
+        }
+    }
 
-        const response = await fetch(url);
-        const data = await response.json();
-
+    try {
         // Clear old markers
         Object.values(planeMarkers).forEach(m => map.removeLayer(m));
         planeMarkers = {};
@@ -57,7 +83,7 @@ async function fetchFlights() {
             statusEl.textContent = "No flights detected at the moment";
         }
     } catch (err) {
-        console.error(err);
+        console.error("Error processing flight data:", err);
         statusEl.textContent = "❌ Error loading data";
     }
 }
